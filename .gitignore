@@ -1,0 +1,10 @@
+# Vagrant files
+.vagrant
+
+# Unneeded ansible file
+*.retry
+
+# Production files
+group_vars/production.yml
+group_vars/.gitignore
+

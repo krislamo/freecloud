@@ -1,0 +1,119 @@
+# Freedom Cloud. Management code for a self-hosted file server.
+# Copyright (C) 2019  Kris Lamoureux
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, version 3 of the License.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+
+- name: Install Apache
+  apt:
+    name: apache2
+    state: present
+
+- name: Create Public HTML Directory
+  file:
+    path: "{{ nc_docroot }}"
+    state: directory
+
+- name: Install MySQL/MariaDB
+  apt:
+    name: mariadb-server
+    state: present
+
+- name: Ansible MySQL/MariaDB Dependency
+  apt:
+    name: python-mysqldb
+    state: present
+
+- name: Create Database
+  mysql_db:
+    name: "{{ nc_db }}"
+    state: present
+
+- name: Create Database User
+  mysql_user:
+    name: "{{ nc_db_user }}"
+    password: "{{ nc_db_pass }}"
+    priv: 'nextcloud.*:ALL'
+    state: present
+
+- name: Install PHP
+  apt:
+    name: php7.3
+    state: present
+
+- name: Install PHP modules
+  apt:
+    name: ['php7.3-mysql', 'php7.3-xml', 'php7.3-mbstring',
+           'php7.3-gd', 'php7.3-curl', 'php7.3-zip',
+           'php7.3-intl', 'php7.3-imagick']
+    state: present
+  notify:
+    - Reload Apache
+
+- name: Download Nextcloud
+  get_url:
+    url: "https://download.nextcloud.com/server/releases/\
+          nextcloud-{{ nc_version }}.tar.bz2"
+    dest: /tmp/nextcloud-{{ nc_version }}.tar.bz2
+    checksum: sha256:{{ nc_sha256sum }}
+    timeout: 600
+
+- name: Extract Nextcloud
+  unarchive:
+    src: /tmp/nextcloud-{{ nc_version }}.tar.bz2
+    dest: /var/www
+    owner: www-data
+    group: www-data
+    remote_src: true
+
+- name: Install Nextcloud
+  command: 'sudo -u www-data php occ maintenance:install
+            --database "mysql"
+            --database-name "{{ nc_db }}"
+            --database-user "{{ nc_db_user }}"
+            --database-pass "{{ nc_db_pass }}"
+            --admin-user "{{ nc_admin }}"
+            --admin-pass "{{ nc_admin_pass }}"'
+  register: nc_install
+  args:
+    warn: false
+    chdir: "{{ nc_docroot }}"
+    creates: "{{ nc_docroot }}/config/config.php"
+
+- name: Set Nextcloud's Trusted Domain
+  command: 'sudo -u www-data php occ config:system:set trusted_domains 0
+           --value="{{ nc_domain }}"'
+  when: nc_install.changed
+  args:
+    warn: false
+    chdir: "{{ nc_docroot }}"
+
+- name: Create Apache Virtual Host
+  template:
+    src: apacheconf.conf
+    dest: /etc/apache2/sites-available/{{ nc_domain }}.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify:
+    - Reload Apache
+
+- name: Enable Site
+  file:
+    src: /etc/apache2/sites-available/{{ nc_domain }}.conf
+    dest: /etc/apache2/sites-enabled/{{ nc_domain }}.conf
+    state: link
+    owner: root
+    group: root
+  notify:
+    - Reload Apache
