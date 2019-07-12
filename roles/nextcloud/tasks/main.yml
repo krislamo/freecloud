@@ -83,7 +83,8 @@
             --database-user "{{ nc_db_user }}"
             --database-pass "{{ nc_db_pass }}"
             --admin-user "{{ nc_admin }}"
-            --admin-pass "{{ nc_admin_pass }}"'
+            --admin-pass "{{ nc_admin_pass }}"
+            --data-dir "{{ nc_data }}"'
   register: nc_install
   args:
     warn: false
