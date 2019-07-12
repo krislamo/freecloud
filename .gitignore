@@ -5,6 +5,10 @@
 *.retry
 
 # Production files
-group_vars/production.yml
-group_vars/.gitignore
+*.yml
+host_vars/**
+
+# Testing env exceptions
+!testing.yml
+!./host_vars/all.yml
 
