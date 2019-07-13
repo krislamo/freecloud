@@ -6,9 +6,9 @@
 
 # Production files
 *.yml
-host_vars/**
+host_vars
 
 # Testing env exceptions
 !testing.yml
-!./host_vars/all.yml
+!all.yml
 
