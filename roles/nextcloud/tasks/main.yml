@@ -109,6 +109,27 @@
   notify:
     - Reload Apache
 
+- name: Enable Apache Rewrite Module
+  apache2_module:
+    name: rewrite
+    state: present
+  notify:
+    - Reload Apache
+
+- name: Enable Apache SSL Module
+  apache2_module:
+    name: ssl
+    state: present
+  notify:
+    - Reload Apache
+
+- name: Enable Apache Headers Module
+  apache2_module:
+    name: headers
+    state: present
+  notify:
+     - Reload Apache
+
 - name: Enable Site
   file:
     src: /etc/apache2/sites-available/{{ nc_domain }}.conf
@@ -118,3 +139,4 @@
     group: root
   notify:
     - Reload Apache
+
